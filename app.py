@@ -8,8 +8,16 @@ from datetime import datetime
 
 # Hardcoded secrets (VULNERABILITY #1)
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'asdfghkl;'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:admin123@localhost:5433/inventorydb'
+
+# Use environment variable SECRET_KEY if set, otherwise fallback to default (vulnerable)
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'asdfghkl;')
+
+# Use environment variable DATABASE_URL if set, otherwise fallback to local postgres connection (vulnerable)
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv(
+    'DATABASE_URL',
+    'postgresql://postgres:admin123@localhost:5433/inventorydb'
+)
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
