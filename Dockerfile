@@ -24,5 +24,6 @@ EXPOSE 5000
 ENV FLASK_APP=app.py
 ENV FLASK_RUN_HOST=0.0.0.0
 
+# No CMD here – docker-compose will handle it
 # Run the Flask app
-CMD ["./wait-for-db.sh", "db", "flask", "run"]
+#CMD ["./wait-for-db.sh", "db", "flask", "run"]
