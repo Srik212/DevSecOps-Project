@@ -17,7 +17,6 @@
       background-color: #1d1d1e;
     }
 
-
     .navbar-brand, .nav-link, .btn-logout {
       color: #fff !important;
     }
@@ -148,7 +147,8 @@
     <h3>Welcome, {{ current_user.username }}</h3>
 
     <!-- Add Item Form -->
-    <form method="POST" action="{{ url_for('add_item') }}" class="row g-2 mb-4">
+    <!-- To test vulnerable add_item, change 'add_item' to 'vuln_add_item' -->
+    <form method="POST" action="{{ url_for('vuln_add_item') }}" class="row g-2 mb-4">
       <div class="col-md-5">
         <input type="text" name="name" class="form-control py-3" placeholder="Item Name" required />
       </div>
@@ -158,7 +158,6 @@
       <div class="col-md-4">
         <button class="btn btn-add w-100 py-3" type="submit">Add Item</button>
       </div>
-      
     </form>
 
     <!-- Inventory Table -->
@@ -205,7 +204,8 @@
           </form>
             </td>
           {% else %}
-            <td>{{ item.name }}</td>
+            <!-- Render item.name unescaped to simulate stored XSS -->
+            <td>{{ item.name|safe }}</td>
             <td>{{ item.quantity }}</td>
             <td>
               {% if item.date_added %}
@@ -225,7 +225,7 @@
           {% endif %}
         </tr>
         {% endfor %}
-      </tbody>  
+      </tbody>
     </table>
   </div>
 
