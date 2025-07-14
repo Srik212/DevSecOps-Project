@@ -8,10 +8,14 @@ WORKDIR /app
 COPY requirements.txt .
 
 # Install dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+RUN apt-get update && apt-get install -y postgresql-client && \
+    pip install --no-cache-dir -r requirements.txt
 
 # Copy the app source code into container
 COPY . .
+
+# Make the wait script executable
+RUN chmod +x wait-for-db.sh
 
 # Expose the port your Flask app runs on
 EXPOSE 5000
@@ -21,4 +25,4 @@ ENV FLASK_APP=app.py
 ENV FLASK_RUN_HOST=0.0.0.0
 
 # Run the Flask app
-CMD ["flask", "run"]
+CMD ["./wait-for-db.sh", "db", "flask", "run"]
