@@ -1,0 +1,29 @@
+version: '3.9'  # Compose file format version
+
+services:
+  web:
+    build: .  # Build Docker image using Dockerfile in the current directory
+    ports:
+      - "5000:5000"  # Map host port 5000 to container port 5000 (Flask default)
+    environment:
+      - FLASK_ENV=development  # Set Flask environment to development for debugging
+      - FLASK_RUN_HOST=0.0.0.0  # Make Flask listen on all interfaces inside container
+      - DATABASE_URL=postgresql://postgres:password@db:5432/inventorydb  # Database connection URL
+    depends_on:
+      - db  # Wait for the 'db' service to start before starting 'web'
+    command: ["./wait-for-db.sh", "db", "flask", "run"]  # Wait for DB to be ready, then run Flask app
+
+  db:
+    image: postgres:15  # Use official PostgreSQL version 15 image
+    restart: always  # Always restart container if it crashes
+    environment:
+      POSTGRES_USER: postgres  # Default DB username
+      POSTGRES_PASSWORD: password  # Default DB password (change for production!)
+      POSTGRES_DB: inventorydb  # Default database name to create
+    ports:
+      - "5432:5432"  # Expose PostgreSQL default port to host
+    volumes:
+      - pgdata:/var/lib/postgresql/data  # Persist DB data on host volume 'pgdata'
+
+volumes:
+  pgdata:  # Named volume to persist PostgreSQL data outside container
