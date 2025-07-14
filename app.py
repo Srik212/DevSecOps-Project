@@ -1,23 +1,25 @@
-from flask import Flask, render_template, redirect, url_for, request, flash, session
+from flask import Flask, render_template, redirect, url_for, request, flash, session, abort
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 import os
-from flask import abort
+import pickle
 from datetime import datetime
 
+# Hardcoded secrets (VULNERABILITY #1)
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'asdfghkl;'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:admin123@localhost:5433/inventorydb'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# Initialize extensions
 db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
-# User model
+# =======================
+# MODELS
+# =======================
 class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(150), unique=True, nullable=False)
@@ -25,7 +27,6 @@ class User(db.Model, UserMixin):
     email = db.Column(db.String(150), unique=True, nullable=True)
     role = db.Column(db.String(50), nullable=False, default='user')
     is_active = db.Column(db.Boolean, default=True)
-
 
 class InventoryItem(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -35,14 +36,15 @@ class InventoryItem(db.Model):
     date_added = db.Column(db.DateTime, default=datetime.utcnow)
     last_modified_by = db.Column(db.String(150))
     last_modified_date = db.Column(db.DateTime)
-    user = db.relationship('User', backref='items')  # Adds relationship to fetch username easily
-
-
-
+    user = db.relationship('User', backref='items')
 
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
+
+# =======================
+# ROUTES
+# =======================
 
 @app.route('/')
 def index():
@@ -62,15 +64,12 @@ def signup():
     return render_template('signup.html')
 
 @app.route('/login', methods=['GET', 'POST'])
-@app.route('/login', methods=['GET', 'POST'])
 def login():
     error = None
-
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
         user = User.query.filter_by(username=username).first()
-
         if user and bcrypt.check_password_hash(user.password, password):
             if not user.is_active:
                 error = 'Your account is disabled. Contact admin.'
@@ -79,9 +78,52 @@ def login():
                 return redirect(url_for('dashboard'))
         else:
             error = 'Incorrect Password'
-
     return render_template('login.html', error=error)
 
+#  SQL Injection (VULNERABILITY #2)
+@app.route('/insecure_login', methods=['GET', 'POST'])
+def insecure_login():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+
+        #  Raw SQL with unsanitized input
+        query = f"SELECT * FROM user WHERE username = '{username}' AND password = '{password}'"
+        result = db.session.execute(query).fetchone()
+
+        if result:
+            user = User.query.get(result[0])
+            login_user(user)
+            return redirect(url_for('dashboard'))
+        else:
+            flash("Invalid credentials.")
+    return render_template('login.html')
+
+# ✅ Command Injection (VULNERABILITY #3)
+@app.route('/ping', methods=['GET', 'POST'])
+def ping():
+    output = ""
+    if request.method == 'POST':
+        target = request.form['target']
+        # ⚠️ No sanitization, vulnerable to command injection
+        stream = os.popen(f"ping -c 2 {target}")
+        output = stream.read()
+    return f"<pre>{output}</pre><form method='POST'><input name='target'><input type='submit'></form>"
+
+#  Insecure Deserialization (VULNERABILITY #4)
+@app.route('/load_profile', methods=['GET', 'POST'])
+def load_profile():
+    if request.method == 'POST':
+        serialized = request.form['data']
+        try:
+            user_data = pickle.loads(bytes.fromhex(serialized))  # ⚠️ Dangerous
+            return f"<pre>{user_data}</pre>"
+        except Exception as e:
+            return f"Error: {e}"
+    return '''<form method="POST">
+                <textarea name="data" rows="4" cols="50"></textarea><br>
+                <input type="submit">
+              </form>'''
 
 @app.route('/dashboard')
 @login_required
@@ -100,30 +142,12 @@ def logout():
     logout_user()
     return redirect(url_for('login'))
 
-
-@app.route('/add_item', methods=['POST'])
+#  Bad Permissions (VULNERABILITY #5)
+@app.route('/vuln_update_item/<int:item_id>', methods=['POST'])
 @login_required
-def add_item():
-    name = request.form['name']
-    quantity = request.form['quantity']
-    new_item = InventoryItem(
-        name=name,
-        quantity=quantity,
-        user_id=current_user.id,
-        last_modified_by=current_user.username  # Optional
-    )
-    db.session.add(new_item)
-    db.session.commit()
-    return redirect(url_for('dashboard'))
-
-
-
-@app.route('/update_item/<int:item_id>', methods=['POST'])
-@login_required
-def update_item(item_id):
+def vuln_update_item(item_id):
+    #  No role check
     item = InventoryItem.query.get_or_404(item_id)
-    if current_user.role != 'admin':
-        abort(403)
     item.name = request.form['name']
     item.quantity = int(request.form['quantity'])
     item.last_modified_by = current_user.username
@@ -131,6 +155,23 @@ def update_item(item_id):
     db.session.commit()
     return redirect(url_for('dashboard'))
 
+#  Stored XSS (VULNERABILITY #6)
+@app.route('/vuln_add_item', methods=['POST'])
+@login_required
+def vuln_add_item():
+    name = request.form['name']  #  Store raw input
+    quantity = request.form['quantity']
+    new_item = InventoryItem(
+        name=name,
+        quantity=quantity,
+        user_id=current_user.id,
+        last_modified_by=current_user.username
+    )
+    db.session.add(new_item)
+    db.session.commit()
+    return redirect(url_for('dashboard'))
+
+# Regular safe delete routes
 @app.route('/delete_item/<int:item_id>', methods=['POST'])
 @login_required
 def delete_item(item_id):
@@ -144,8 +185,6 @@ def delete_item(item_id):
     flash(f"Item '{item.name}' deleted.")
     return redirect(url_for('dashboard'))
 
-
-
 @app.route('/delete_user/<int:user_id>', methods=['POST'])
 @login_required
 def delete_user(user_id):
@@ -154,34 +193,14 @@ def delete_user(user_id):
         return redirect(url_for('dashboard'))
 
     user = User.query.get_or_404(user_id)
-
-    # Prevent admin from deleting themselves
     if user.id == current_user.id:
         flash("You can't delete yourself.")
         return redirect(url_for('dashboard'))
 
-    # Delete user and their inventory
     InventoryItem.query.filter_by(user_id=user.id).delete()
     db.session.delete(user)
     db.session.commit()
     flash(f'User {user.username} and their items were deleted.')
-    return redirect(url_for('dashboard'))
-
-@app.route('/disable_user/<int:user_id>', methods=['POST'])
-@login_required
-def disable_user(user_id):
-    if current_user.role != 'admin':
-        flash('Access denied.')
-        return redirect(url_for('dashboard'))
-
-    user = User.query.get_or_404(user_id)
-    if user.id == current_user.id:
-        flash("You can't disable yourself.")
-        return redirect(url_for('dashboard'))
-
-    user.is_active = False
-    db.session.commit()
-    flash(f'User {user.username} has been disabled.')
     return redirect(url_for('dashboard'))
 
 @app.route('/toggle_user/<int:user_id>', methods=['POST'])
@@ -202,11 +221,14 @@ def toggle_user(user_id):
     flash(f'User {user.username} has been {status}.')
     return redirect(url_for('dashboard'))
 
+# =======================
+# INIT & LAUNCH
+# =======================
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
 
-        # Create admin user if not exists
+        # Admin auto-creation
         from sqlalchemy.exc import SQLAlchemyError
         try:
             admin = User.query.filter_by(username='admin').first()
@@ -222,4 +244,3 @@ if __name__ == '__main__':
             print("Error initializing admin:", e)
 
     app.run(debug=True, port=5000)
-
