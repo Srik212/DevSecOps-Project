@@ -14,6 +14,7 @@ RUN apt-get update && apt-get install -y postgresql-client && \
 # Copy the app source code into container
 COPY . .
 COPY wait-for-db.sh .
+COPY init_db.py .
 # Make the wait script executable
 RUN chmod +x wait-for-db.sh
 
