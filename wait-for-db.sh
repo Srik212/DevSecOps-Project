@@ -17,3 +17,4 @@ python init_db.py
 
 >&2 echo "Starting app..."
 exec $cmd
+
