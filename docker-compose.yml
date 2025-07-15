@@ -11,6 +11,7 @@ services:
       - DATABASE_URL=postgresql://postgres:password@db:5432/inventorydb  # Database connection URL
     depends_on:
       - db  # Wait for the 'db' service to start before starting 'web'
+    working_dir: /app 
     command: ["./wait-for-db.sh", "db", "flask", "run"]  # Wait for DB to be ready, then run Flask app
 
   db:
