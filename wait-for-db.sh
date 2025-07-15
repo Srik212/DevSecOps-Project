@@ -1,5 +1,4 @@
 #!/bin/sh
-
 set -e
 
 host="$1"
@@ -13,5 +12,8 @@ until pg_isready -h "$host" -U "postgres"; do
   sleep 1
 done
 
->&2 echo "Postgres is up - executing command"
+echo "Postgres is up - initializing database..."
+python init_db.py
+
+>&2 echo "Starting app..."
 exec $cmd
