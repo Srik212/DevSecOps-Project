@@ -28,3 +28,5 @@ ENV FLASK_RUN_HOST=0.0.0.0
 # No CMD here – docker-compose will handle it
 # Run the Flask app
 CMD ["./wait-for-db.sh", "db", "flask", "run"]
+
+

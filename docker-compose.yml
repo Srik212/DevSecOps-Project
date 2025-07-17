@@ -19,7 +19,7 @@ services:
     restart: always  # Always restart container if it crashes
     environment:
       POSTGRES_USER: postgres  # Default DB username
-      POSTGRES_PASSWORD: password  # Default DB password (change for production!)
+      POSTGRES_PASSWORD: admin123  # Default DB password (change for production!)
       POSTGRES_DB: inventorydb  # Default database name to create
     ports:
       - "5432:5432"  # Expose PostgreSQL default port to host
