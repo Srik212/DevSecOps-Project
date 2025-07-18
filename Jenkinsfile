@@ -4,7 +4,7 @@ pipeline {
     environment {
         SONAR_TOKEN = credentials('6869b9a92ef03c3b0296b5bb25f7489c1ff29b5f') // Jenkins Credential ID
         SONAR_ORG = 'devsecops2025'                    // Replace with your SonarCloud org
-        SONAR_PROJECT_KEY = 'devsecops2025'          // Replace with your SonarCloud project key
+        SONAR_PROJECT_KEY = 'devsecops2025'  
     }
 
     stages {
@@ -18,6 +18,7 @@ pipeline {
             steps {
                 sh '''
                 if [ ! -d "sonar-scanner-4.8.0.2856-linux" ]; then
+                    echo "Downloading Sonar Scanner..."
                     wget -q https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.8.0.2856-linux.zip -O sonar-scanner.zip
                     unzip -q sonar-scanner.zip
                     chmod +x sonar-scanner-4.8.0.2856-linux/bin/sonar-scanner
