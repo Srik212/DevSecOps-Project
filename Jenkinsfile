@@ -14,41 +14,12 @@ pipeline {
             }
         }
 
-        stage('Install Sonar Scanner') {
-            steps {
-                sh '''
-                if [ ! -d "sonar-scanner-4.8.0.2856-linux" ]; then
-                    echo "Downloading Sonar Scanner..."
-                    wget -q https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.8.0.2856-linux.zip -O sonar-scanner.zip
-                    unzip -q sonar-scanner.zip
-                    chmod +x sonar-scanner-4.8.0.2856-linux/bin/sonar-scanner
-                fi
-                '''
-            }
-        }
-
-        stage('Verify SonarScanner') {
-            steps {
-                sh './sonar-scanner-4.8.0.2856-linux/bin/sonar-scanner --version'
-            }
-        }
-
-        stage('SonarCloud Scan') {
-            steps {
-                sh '''
-                set -x
-                ./sonar-scanner-4.8.0.2856-linux/bin/sonar-scanner \
-                  -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
-                  -Dsonar.organization=${SONAR_ORG} \
-                  -Dsonar.host.url=https://sonarcloud.io \
-                  -Dsonar.login=${SONAR_TOKEN} \
-                  -Dsonar.sources=. \
-                  -Dsonar.language=py \
-                  -Dsonar.python.version=3
-                '''
-            }
-        }
+        
+    stage('Debug') {
+    steps {
+        sh 'echo Hello from Jenkins'
     }
+}
 
     post {
         always {
