@@ -14,14 +14,13 @@ pipeline {
             }
         }
 
-        stage('Install Sonar Scanner') {
+        stage('Download Sonar Scanner') {
             steps {
                 sh '''
-                if ! command -v sonar-scanner >/dev/null 2>&1; then
-                    echo "Downloading Sonar Scanner..."
-                    wget https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.8.0.2856-linux.zip -O sonar-scanner.zip
-                    unzip sonar-scanner.zip
-                    export PATH=$PATH:$PWD/sonar-scanner-4.8.0.2856-linux/bin
+                if [ ! -d "sonar-scanner-4.8.0.2856-linux" ]; then
+                    echo "Downloading SonarScanner..."
+                    wget -q https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.8.0.2856-linux.zip -O sonar-scanner.zip
+                    unzip -q sonar-scanner.zip
                 fi
                 '''
             }
@@ -29,8 +28,8 @@ pipeline {
 
         stage('SonarCloud Scan') {
             steps {
-                sh """
-                sonar-scanner \
+                sh '''
+                ./sonar-scanner-4.8.0.2856-linux/bin/sonar-scanner \
                   -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
                   -Dsonar.organization=${SONAR_ORG} \
                   -Dsonar.host.url=https://sonarcloud.io \
@@ -38,7 +37,7 @@ pipeline {
                   -Dsonar.sources=. \
                   -Dsonar.language=py \
                   -Dsonar.python.version=3
-                """
+                '''
             }
         }
     }
