@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        SONAR_TOKEN = credentials('8ac096dc06b5461e775df71488018230abd54a81') // Jenkins Credential ID
+        SONAR_TOKEN = credentials('6869b9a92ef03c3b0296b5bb25f7489c1ff29b5f') // Jenkins Credential ID
         SONAR_ORG = 'devsecops2025'                    // Replace with your SonarCloud org
         SONAR_PROJECT_KEY = 'devsecops2025'          // Replace with your SonarCloud project key
     }
