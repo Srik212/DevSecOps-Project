@@ -1,4 +1,4 @@
-# 🛡️ Buggy Bank – Secure FinTech Web App (Intentionally Vulnerable)
+# FinTech Web App (Intentionally Vulnerable)
 
 Buggy Bank is an intentionally vulnerable online banking and inventory management application built with Flask and PostgreSQL. This project is designed to demonstrate common web application security flaws in a controlled DevSecOps environment. Ideal for security testing, training, and CI/CD automation experiments.
 
